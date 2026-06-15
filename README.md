@@ -10,7 +10,7 @@ This package provides a structured way to interact with IDX in both Node.js and 
 
 Install from GitHub:
 
-> npm install https://github.com/pwn-interests/idx.git
+> npm install https://github.com/pwngh/idx.git
 
 ### Server-Side Features (<small>`@pwngh/idx/node`</small>)
 
