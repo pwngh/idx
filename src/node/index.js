@@ -30,3 +30,27 @@ export function createIDX(config) {
     client
   };
 }
+
+// Pure data helpers, re-exported so consumers can normalize and format raw
+// records without reaching into the package internals.
+export {
+  normalizePropertyData,
+  normalizeAgentData,
+  normalizePhotos,
+  formatPrice,
+  formatArea,
+  formatAddress,
+  formatNumber,
+  formatDate,
+  getBathCount,
+  getPhotoUrl,
+  isEmpty,
+  parsePrice,
+  parseSearchParams,
+  validatePropertyData
+} from '../shared/utils.js';
+export {
+  PROPERTY_TYPES,
+  PROPERTY_STATUS,
+  SORT_OPTIONS
+} from '../shared/constants.js';

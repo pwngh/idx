@@ -1,5 +1,5 @@
 import { useFetcher, useNavigation } from '@remix-run/react';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { debounce } from '../../shared/utils';
 import { DEFAULT_PARAMS } from '../../shared/constants';
 
@@ -29,39 +29,43 @@ export function usePropertySearch({ searchPath, initialProperties = [] }) {
   const fetcher = useFetcher();
   const navigation = useNavigation();
 
-  const isSearching =
-    navigation.state === 'loading' ||
-    fetcher.state === 'submitting';
+  // Keep the latest fetcher in a ref so the debounced `search` (and its pending
+  // timer) survives the fetcher identity changing between renders.
+  const fetcherRef = useRef(fetcher);
+  useEffect(() => {
+    fetcherRef.current = fetcher;
+  }, [fetcher]);
 
-  const isError = fetcher.data?.error;
+  // Track the running offset and last filters here, not in the URL: a GET
+  // `fetcher.submit` does not update window.location, so reading the offset back
+  // from it always returned 0 and `loadMore` never advanced past the first page.
+  const lastParamsRef = useRef({});
+  const offsetRef = useRef(0);
 
-  const search = useMemo(() =>
-    debounce((params) => {
-      fetcher.submit(
-        { ...params },
-        {
-          method: 'get',
-          action: searchPath
-        }
-      );
-    }, SEARCH_DEBOUNCE_MS),
-    [fetcher, searchPath]
+  const isSearching = navigation.state === 'loading' || fetcher.state === 'submitting';
+  const isError = Boolean(fetcher.data?.error);
+
+  const search = useMemo(
+    () =>
+      debounce((params = {}) => {
+        lastParamsRef.current = params;
+        offsetRef.current = 0;
+        fetcherRef.current.submit({ ...params }, { method: 'get', action: searchPath });
+      }, SEARCH_DEBOUNCE_MS),
+    [searchPath]
   );
 
-  const loadMore = useCallback(() => {
-    const currentParams = new URLSearchParams(window.location.search);
-    const currentOffset = parseInt(currentParams.get('offset') || '0', 10);
+  // Drop any pending debounced submit when `search` is rebuilt (searchPath
+  // changed) or the component unmounts, so a stale timer can't fire late.
+  useEffect(() => () => search.cancel(), [search]);
 
-    fetcher.submit(
-      {
-        offset: currentOffset + DEFAULT_PARAMS.LIMIT
-      },
-      {
-        method: 'get',
-        action: searchPath
-      }
+  const loadMore = useCallback(() => {
+    offsetRef.current += DEFAULT_PARAMS.LIMIT;
+    fetcherRef.current.submit(
+      { ...lastParamsRef.current, offset: offsetRef.current },
+      { method: 'get', action: searchPath }
     );
-  }, [fetcher, searchPath]);
+  }, [searchPath]);
 
   const properties = fetcher.data?.properties || initialProperties;
 

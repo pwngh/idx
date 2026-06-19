@@ -38,7 +38,6 @@ export const API_ENDPOINTS = {
   PROPERTIES: 'listings',
   OFFICES: 'offices',
   AGENTS: 'agents',
-  OPEN_HOUSES: 'openhouses',
   MEDIA: 'Media'
 };
 
@@ -57,20 +56,10 @@ export const DEFAULT_PARAMS = {
 
 /** User-facing error strings thrown by the client and method layers. */
 export const ERROR_MESSAGES = {
-  INVALID_RESPONSE: 'Invalid response from server',
   MISSING_ID: 'Property ID is required',
   MISSING_COORDINATES: 'Latitude and longitude are required',
   MISSING_REQUIRED_FIELDS: (fields) => `Missing required fields: ${fields.join(', ')}`,
-  API_ERROR: 'Failed to fetch data from IDX service',
-  VALIDATION_ERROR: 'Property validation failed'
-};
-
-/** Google Maps defaults: zoom bounds, initial center (San Francisco), and marker-clustering cutoff. */
-export const MAP_CONFIG = {
-  DEFAULT_ZOOM: 12,
-  MAX_ZOOM: 20,
-  DEFAULT_CENTER: { lat: 37.7749, lng: -122.4194 },
-  CLUSTER_THRESHOLD: 100
+  API_ERROR: 'Failed to fetch data from IDX service'
 };
 
 /** Listing photo size presets (width x height) and the placeholder shown when a listing has no media. */

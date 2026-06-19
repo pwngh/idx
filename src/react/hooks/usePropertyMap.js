@@ -131,6 +131,10 @@ export function usePropertyMap({
   const [error, setError] = useState(null);
   const isMounted = useRef(true);
 
+  // Pull the callback out so effects can depend on it directly rather than on the
+  // inline `mapOptions` object, whose identity changes every render.
+  const onMarkerClick = mapOptions.onMarkerClick;
+
   // track mounted state
   useEffect(() => {
     isMounted.current = true;
@@ -371,7 +375,7 @@ export function usePropertyMap({
           pixelOffset: new google.maps.Size(0, isDot ? 0 : -5)
         });
 
-        if (mapOptions.onMarkerClick) {
+        if (onMarkerClick) {
           marker.addListener('click', () => {
             if (isMounted.current) {
               markersRef.current.forEach(m => {
@@ -381,7 +385,7 @@ export function usePropertyMap({
               infoWindow.open(mapInstance.current, marker);
               marker.infoWindow = infoWindow;
 
-              mapOptions.onMarkerClick(property);
+              onMarkerClick(property);
             }
           });
         }
@@ -417,7 +421,10 @@ export function usePropertyMap({
         setError(err);
       }
     }
-  }, [properties, mapOptions.onMarkerClick, isLoaded, addMarkerHoverEffects, mapOptions, getMarkerType]);
+    // The extracted `onMarkerClick` (not the inline `mapOptions` object) is the
+    // dependency, so markers aren't rebuilt every render just because the caller
+    // passed a fresh options object.
+  }, [properties, onMarkerClick, isLoaded, addMarkerHoverEffects, getMarkerType]);
 
   // cleanup
   useEffect(() => {

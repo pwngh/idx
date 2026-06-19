@@ -21,7 +21,7 @@ Install from GitHub:
 
 ### Server-Side Usage
 
-```node
+```javascript
 import { createIDX } from '@pwngh/idx/node';
 
 const { 

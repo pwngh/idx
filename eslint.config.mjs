@@ -13,7 +13,7 @@ export default [
   prettier,
   react.configs.flat.recommended,
   {
-    ignores: ['**/dist/', '**/types/', '**/coverage/', '**/example/']
+    ignores: ['**/dist/', '**/types/', '**/coverage/', '**/example/', '**/storybook-static/']
   },
   {
     files: ['**/*.js', '**/*.jsx', '**/*.mjs', '**/*.cjs'],

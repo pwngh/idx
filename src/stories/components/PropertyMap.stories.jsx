@@ -4,7 +4,6 @@ import dotenv from 'dotenv';
 import { fn } from '@storybook/test';
 
 const onMarkerClick = fn();
-const onBoundsChanged = fn();
 
 dotenv.config()
 
@@ -100,7 +99,6 @@ export const Default = {
       center={houstonCenter}
       zoom={11}
       onMarkerClick={onMarkerClick}
-      onBoundsChanged={onBoundsChanged}
     />
   )
 };
@@ -113,7 +111,6 @@ export const DenseUrbanArea = {
       center={houstonCenter}
       zoom={14}
       onMarkerClick={onMarkerClick}
-      onBoundsChanged={onBoundsChanged}
     />
   )
 };
@@ -126,7 +123,6 @@ export const SuburbanSpread = {
       center={{ lat: 29.8174, lng: -95.6599 }}
       zoom={11}
       onMarkerClick={onMarkerClick}
-      onBoundsChanged={onBoundsChanged}
     />
   )
 };
@@ -141,7 +137,6 @@ export const CustomHeightMap = {
         zoom={11}
         className="h-[800px] rounded-xl shadow-lg"
         onMarkerClick={onMarkerClick}
-        onBoundsChanged={onBoundsChanged}
       />
     </div>
   )
@@ -157,7 +152,6 @@ export const MobileView = {
         zoom={11}
         className="h-full"
         onMarkerClick={onMarkerClick}
-        onBoundsChanged={onBoundsChanged}
       />
     </div>
   ),

@@ -111,7 +111,7 @@ test('parseSearchParams applies defaults for missing query params', () => {
   assert.equal(filters.minPrice, 0);
   assert.equal(filters.maxPrice, 100000000);
   assert.equal(filters.status, 'Active');
-  assert.equal(filters.sort, 'ListingContractDate');
+  assert.equal(filters.sortBy, 'ListingContractDate');
   assert.equal(filters.order, 'desc');
 });
 

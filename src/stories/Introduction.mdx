@@ -1,0 +1,67 @@
+import { Meta } from '@storybook/blocks';
+
+<Meta title="Introduction" />
+
+# @pwngh/idx — React components
+
+IDX (real-estate listing) components and hooks for Remix applications. The
+components are styled with Tailwind utility classes and ship no runtime styling
+of their own, so they inherit your app's Tailwind theme. The only peer
+dependencies are React, `@remix-run/react`, and (for the map) `@googlemaps/js-api-loader`.
+
+```bash
+npm install @pwngh/idx
+```
+
+```jsx
+import { PropertyList, PropertyDetails, Pagination } from '@pwngh/idx/react';
+```
+
+## The normalized `Property` shape
+
+Every component consumes the normalized `Property` object produced by
+`normalizePropertyData` (exported from `@pwngh/idx/node`). The fixtures used in
+these stories mirror that shape exactly. A few fields are easy to get wrong:
+
+- `price` is a raw **number**; `priceFormatted` and `priceSqFt` are preformatted **strings**.
+- `features.baths` is an **object** `{ total, full, half }` — not a number. Use
+  `getBathCount(features.baths)` if you need a single value.
+- `features.beds` and `features.sqft` are numbers.
+- `photos` is an array of `{ url, order, shortDescription, ... }` — the URL is on `photo.url`.
+- `dates.listed` and `dates.modified` are `Date` instances (or `null`).
+- `geo.lat` / `geo.lng` are numbers.
+
+```jsx
+import { normalizePropertyData, formatPrice, getBathCount } from '@pwngh/idx/node';
+
+const property = normalizePropertyData(rawResoRecord);
+```
+
+## Components
+
+| Component | Purpose |
+| --- | --- |
+| `PropertyCard` | Summary card: photo, status badge, favorite, price, beds/baths/sqft, MLS#. |
+| `PropertyList` | Responsive grid of cards with header, results count, loading, and empty states. |
+| `PropertyMap` | Interactive Google Map with density-aware markers and an inline preview. |
+| `PropertyDetails` | Detail header: address, price, stat row, description, listing metadata. |
+| `PropertyFeatures` | Interior / exterior / school feature tables with empty-field skipping. |
+| `PropertyGallery` | Responsive photo grid with a full-screen, keyboard-navigable lightbox. |
+| `Pagination` | Results summary plus page navigation. |
+| `AgentCard` | Listing-agent contact card. |
+| `SearchFilters` | Remix `<Form>` that submits filters as URL query params. |
+
+## Hooks
+
+`usePropertySearch`, `usePropertyDetail`, `useNearbyListings`, and
+`usePropertyMap` wrap Remix data loading and the Google Maps lifecycle. Their
+stories render a small harness that shows the values each hook returns and lets
+you trigger its actions.
+
+## Fixtures
+
+The stories import shared fixtures from `src/stories/fixtures/properties.js`:
+`mockProperty`, `mockProperties`, `manyProperties`, `mockPropertyNoPhoto`,
+`mockPropertySold`, `mockPropertyPending`, `mockPropertyLongAddress`,
+`mockPropertyMinimal`, and `galleryPhotos`. The `makeProperty(overrides)`
+factory builds more.

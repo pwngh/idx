@@ -42,7 +42,7 @@ export function parsePrice(price) {
  *
  * @param {number|string} price - Raw price; parsed with parsePrice first.
  * @param {Object} [options] - Intl.NumberFormat overrides, e.g. { maximumFractionDigits: 2 }.
- * @returns {string} Formatted price such as '$450,000'.
+ * @returns {string} Formatted price such as '$450,000'; '$NaN' when the input cannot be parsed to a number.
  */
 export function formatPrice(price, options = {}) {
   const value = parsePrice(price);
@@ -102,8 +102,10 @@ export function getPhotoUrl(photo, size = PHOTO_CONFIG.MEDIUM_SIZE) {
 /**
  * Map a raw RESO listing record onto the package's normalized Property shape.
  *
- * Every field is defaulted, so missing or null source data yields empty
- * strings, zeros, or empty arrays rather than undefined.
+ * Every field is defaulted, so missing or null source data yields a stable
+ * shape rather than undefined: most fields fall back to empty strings, zeros,
+ * or empty arrays, while id, yearBuilt, and the boolean/count flags default to
+ * null.
  *
  * @param {RawProperty} property - Raw record from the Bridge listings endpoint.
  * @returns {Property} Normalized listing.
@@ -113,7 +115,7 @@ export function normalizePropertyData(property) {
     id: property?.ListingId ?? null,
     status: property?.StandardStatus ?? "",
     price: parsePrice(property?.ListPrice) || 0,
-    priceFormatted: formatPrice(property?.ListPrice) || "",
+    priceFormatted: formatPrice(property?.ListPrice),
     priceSqFt: property?.LivingArea
       ? formatPrice(property?.ListPrice / property?.LivingArea, { maximumFractionDigits: 2 })
       : "",
@@ -123,7 +125,7 @@ export function normalizePropertyData(property) {
     associationFeeFrequency: property?.AssociationFeeFrequency || "",
     address: {
       complete: property?.UnparsedAddress || "",
-      street: extractStreet(property?.UnparsedAddress) || "",
+      street: (property?.UnparsedAddress?.match(/^(.*?)(?:,|\s+[A-Z]{2}\s)/)?.[1] || "").trim(),
       city: property?.City || "",
       state: property?.StateOrProvince || "",
       zip: property?.PostalCode || "",
@@ -217,7 +219,13 @@ export function normalizePropertyData(property) {
       otherStructures: property?.OtherStructures || []
     },
     photos: normalizePhotos(property?.Media),
-    geo: extractGeoData(property),
+    geo: {
+      lat: parseFloat(property?.Latitude) || 0,
+      lng: parseFloat(property?.Longitude) || 0,
+      county: property?.CountyOrParish,
+      zip: property?.PostalCode,
+      area: property?.MLSAreaMajor
+    },
     dates: {
       listed: property?.ListingContractDate ? new Date(property.ListingContractDate) : null,
       modified: property?.ModificationTimestamp ? new Date(property.ModificationTimestamp) : null,
@@ -273,40 +281,22 @@ export function normalizePhotos(photos = []) {
 }
 
 /**
- * Extract location fields from a raw listing record.
- *
- * @param {RawProperty} property - Raw record; must be non-null.
- * @returns {PropertyGeo} Coordinates (0 when unparseable) plus county, zip, and MLS area.
- */
-export function extractGeoData(property) {
-  return {
-    lat: parseFloat(property.Latitude) || 0,
-    lng: parseFloat(property.Longitude) || 0,
-    county: property.CountyOrParish,
-    zip: property.PostalCode,
-    area: property.MLSAreaMajor
-  };
-}
-
-/**
  * Delay invoking a function until calls have stopped for the given interval.
  *
  * Each call resets the timer; only the latest arguments are used.
  *
  * @param {Function} func - Function to debounce.
  * @param {number} [wait=300] - Quiet period in milliseconds.
- * @returns {Function} Debounced wrapper.
+ * @returns {Function} Debounced wrapper with a `.cancel()` method that drops any pending call.
  */
 export function debounce(func, wait = 300) {
   let timeout;
-  return function executedFunction(...args) {
-    const later = () => {
-      clearTimeout(timeout);
-      func(...args);
-    };
+  const debounced = (...args) => {
     clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
+    timeout = setTimeout(() => func(...args), wait);
   };
+  debounced.cancel = () => clearTimeout(timeout);
+  return debounced;
 }
 
 /**
@@ -326,17 +316,88 @@ export function parseSearchParams(params) {
     baths: params.get('baths'),
     propertyType: params.get('propertyType'),
     status: params.get('status') || PROPERTY_STATUS.ACTIVE,
-    sort: params.get('sort') || SORT_OPTIONS.DATE_DESC.field,
+    sortBy: params.get('sortBy') || SORT_OPTIONS.DATE_DESC.field,
     order: params.get('order') || SORT_OPTIONS.DATE_DESC.order
   };
 }
 
-/** Extracts the street portion of an address: everything before the first comma or two-letter state code. */
-function extractStreet(address) {
-  if (!address || typeof address !== 'string') {
-    return '';
-  }
+/**
+ * Format a numeric value for compact display, dropping trailing zeros.
+ *
+ * Integers render without decimals; fractional values keep a single decimal
+ * place, so bed/bath counts like 2 and 2.5 both read cleanly.
+ *
+ * @param {number|string} num - Value to format; strings are parsed as floats.
+ * @returns {string} Formatted number such as '2' or '2.5'; '0' for empty or non-numeric input.
+ */
+export function formatNumber(num) {
+  const value = parseFloat(num);
+  if (Number.isNaN(value)) return '0';
+  return Number.isInteger(value) ? value.toString() : value.toFixed(1);
+}
 
-  const streetMatch = address.match(/^(.*?)(?:,|\s+[A-Z]{2}\s)/);
-  return streetMatch ? streetMatch[1].trim() : '';
+/**
+ * Resolve a total bathroom count from the normalized `features.baths` field.
+ *
+ * `normalizePropertyData` stores baths as an object ({ total, full, half }),
+ * but loosely-typed callers sometimes pass a plain number. This accepts either.
+ *
+ * @param {{total?: number}|number|null|undefined} baths - Normalized baths object or a raw count.
+ * @returns {number} Total bathrooms; 0 when unknown.
+ */
+export function getBathCount(baths) {
+  if (baths == null) return 0;
+  if (typeof baths === 'object') return Number(baths.total) || 0;
+  return Number(baths) || 0;
+}
+
+/**
+ * Format a date as a long, human-readable string.
+ *
+ * @param {Date|string|number|null|undefined} date - Date instance or any value the Date constructor accepts.
+ * @returns {string} Formatted date such as 'January 5, 2024'; empty string for missing or invalid input.
+ */
+export function formatDate(date) {
+  if (!date) return '';
+  const parsed = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(parsed.getTime())) return '';
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  }).format(parsed);
+}
+
+/**
+ * Report whether a value is "empty" for display purposes.
+ *
+ * Treats null, undefined, false, 0, '', '0', empty arrays, and objects with no
+ * own enumerable keys as empty. Mirrors the guard used across the property
+ * detail components so blank MLS fields are skipped rather than rendered.
+ *
+ * @param {*} value - Value to test.
+ * @returns {boolean} True when the value should be considered empty.
+ */
+export function isEmpty(value) {
+  if (value === null || value === undefined) return true;
+  if (value === false || value === 0 || value === '' || value === '0') return true;
+  if (Array.isArray(value)) return value.length === 0;
+  if (typeof value === 'object') return Object.keys(value).length === 0;
+  return false;
+}
+
+/**
+ * Derive up-to-two uppercase initials from a person's name.
+ *
+ * @param {string} name - Full name, e.g. 'Jane Doe'.
+ * @returns {string} Initials such as 'JD'; '?' for empty or non-string input.
+ */
+export function getInitials(name) {
+  if (!name || typeof name !== 'string') return '?';
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  return parts
+    .slice(0, 2)
+    .map((part) => part[0].toUpperCase())
+    .join('');
 }

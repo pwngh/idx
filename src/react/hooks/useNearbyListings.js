@@ -1,5 +1,5 @@
 import { useFetcher } from '@remix-run/react';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { DEFAULT_PARAMS } from '../../shared/constants';
 
 /**
@@ -29,40 +29,35 @@ export function useNearbyListings({
 }) {
   const fetcher = useFetcher();
 
+  // Remember the last searched coordinates so `updateRadius` can refetch. A GET
+  // `fetcher.submit` doesn't update window.location, so the previous approach of
+  // reading lat/lng back from the URL always found nothing and no-opped.
+  const [coords, setCoords] = useState(null);
+
   const isLoading = fetcher.state !== 'idle';
-  const isError = fetcher.data?.error;
+  const isError = Boolean(fetcher.data?.error);
 
-  const searchNearby = useCallback(({ lat, lng }) => {
-    if (!lat || !lng) return;
+  const searchNearby = useCallback(
+    ({ lat, lng }) => {
+      if (!lat || !lng) return;
 
-    fetcher.submit(
-      { lat, lng, radius },
-      {
-        method: 'get',
-        action: nearbyPath
-      }
-    );
-  }, [fetcher, nearbyPath, radius]);
+      setCoords({ lat, lng });
+      fetcher.submit({ lat, lng, radius }, { method: 'get', action: nearbyPath });
+    },
+    [fetcher, nearbyPath, radius]
+  );
 
-  const updateRadius = useCallback((newRadius) => {
-    const currentParams = new URLSearchParams(window.location.search);
-    const lat = currentParams.get('lat');
-    const lng = currentParams.get('lng');
+  const updateRadius = useCallback(
+    (newRadius) => {
+      if (!coords) return;
 
-    if (lat && lng) {
       fetcher.submit(
-        {
-          lat,
-          lng,
-          radius: newRadius
-        },
-        {
-          method: 'get',
-          action: nearbyPath
-        }
+        { lat: coords.lat, lng: coords.lng, radius: newRadius },
+        { method: 'get', action: nearbyPath }
       );
-    }
-  }, [fetcher, nearbyPath]);
+    },
+    [fetcher, nearbyPath, coords]
+  );
 
   const nearbyListings = fetcher.data?.properties || initialListings;
 

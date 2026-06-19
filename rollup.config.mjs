@@ -43,6 +43,10 @@ const sharedConfig = {
     propertyReadSideEffects: false,
     tryCatchDeoptimization: false
   },
+  onwarn(warning, warn) {
+    if (warning.code === 'THIS_IS_UNDEFINED') return;
+    warn(warning);
+  },
 };
 
 /**
@@ -52,10 +56,6 @@ export default [
    // CommonJS build
   {
     ...sharedConfig,
-    onwarn(warning, warn) {
-      if (warning.code === 'THIS_IS_UNDEFINED') return;
-      warn(warning);
-    },
     input: {
       'node/index': 'src/node/index.js',
       'react/index': 'src/react/index.js'
@@ -74,10 +74,6 @@ export default [
   // ESM build
   {
     ...sharedConfig,
-    onwarn(warning, warn) {
-      if (warning.code === 'THIS_IS_UNDEFINED') return;
-      warn(warning);
-    },
     input: {
       'node/index': 'src/node/index.js',
       'react/index': 'src/react/index.js'

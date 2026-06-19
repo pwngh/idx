@@ -1,7 +1,13 @@
 export { PropertyCard } from './components/PropertyCard';
 export { PropertyList } from './components/PropertyList';
 export { PropertyMap } from './components/PropertyMap';
+export { PropertyDetails } from './components/PropertyDetails';
+export { PropertyFeatures } from './components/PropertyFeatures';
+export { PropertyGallery } from './components/PropertyGallery';
+export { Pagination } from './components/Pagination';
+export { AgentCard } from './components/AgentCard';
 export { SearchFilters } from './components/SearchFilters';
+export { GoogleMapsProvider, useGoogleMapsLoader } from './hooks/GoogleMapsContext';
 export { useNearbyListings } from './hooks/useNearbyListings';
 export { usePropertyDetail } from './hooks/usePropertyDetail';
 export { usePropertyMap } from './hooks/usePropertyMap';

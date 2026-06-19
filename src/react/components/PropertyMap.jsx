@@ -1,13 +1,13 @@
 import { usePropertyMap } from '../hooks/usePropertyMap';
-import { useState, useCallback } from 'react';
-import { formatPrice, formatArea } from '../../shared/utils';
+import { useState, useCallback, useEffect } from 'react';
+import { formatPrice, formatArea, formatAddress, formatNumber, getBathCount } from '../../shared/utils';
 import { GoogleMapsProvider } from '../hooks/GoogleMapsContext';
+import { CloseIcon, PhotoPlaceholder } from './icons';
 
 /** Map canvas, loading overlay, and selected-listing preview; must render inside GoogleMapsProvider. */
 function PropertyMapContent({
   properties,
   onMarkerClick,
-  onBoundsChanged,
   center,
   zoom,
   showCluster,
@@ -26,8 +26,7 @@ function PropertyMapContent({
       center,
       zoom,
       clusterMarkers: showCluster,
-      onMarkerClick: handleMarkerClick,
-      onBoundsChanged
+      onMarkerClick: handleMarkerClick
     }
   });
 
@@ -79,7 +78,6 @@ function PropertyMapContent({
  * @param {string} props.apiKey - Google Maps JavaScript API key.
  * @param {Array<Property>} [props.properties=[]] - Listings to plot; each needs `geo.lat`/`geo.lng`.
  * @param {(property: Property) => void} [props.onMarkerClick] - Called with the listing when its marker is clicked.
- * @param {Function} [props.onBoundsChanged] - Reserved; accepted but not yet wired to map events.
  * @param {PropertyGeo} [props.center] - Initial map center; defaults to San Francisco.
  * @param {number} [props.zoom=12] - Initial zoom level.
  * @param {boolean} [props.showCluster=false] - Reserved; dense areas already collapse to dot markers automatically.
@@ -89,7 +87,6 @@ export function PropertyMap({
   apiKey,
   properties = [],
   onMarkerClick,
-  onBoundsChanged,
   center,
   zoom = 12,
   showCluster = false,
@@ -100,7 +97,6 @@ export function PropertyMap({
       <PropertyMapContent
         properties={properties}
         onMarkerClick={onMarkerClick}
-        onBoundsChanged={onBoundsChanged}
         center={center}
         zoom={zoom}
         showCluster={showCluster}
@@ -111,55 +107,64 @@ export function PropertyMap({
 }
 
 function PropertyPreview({ property, onClose }) {
-  return (
-    <div className="absolute bottom-4 left-4 w-72 rounded-lg bg-white p-4 shadow-lg">
-      <button
-        onClick={onClose}
-        className="absolute right-2 top-2 p-1 text-gray-500 hover:text-gray-700"
-        aria-label="Close preview"
-      >
-        <XIcon className="h-4 w-4" />
-      </button>
+  // Close on Escape, matching the keyboard affordance PropertyGallery provides.
+  useEffect(() => {
+    const onKey = (event) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
-      <div className="aspect-video overflow-hidden rounded-lg">
-        <img
-          src={property.photos[0]?.url || '/placeholder-property.jpg'}
-          alt={property.address.street}
-          className="h-full w-full object-cover"
-        />
+  const { id, status, price, priceFormatted, photos = [], address = {}, features = {} } = property || {};
+  const mainPhoto = photos[0]?.url;
+  const beds = features.beds ?? 0;
+  const baths = getBathCount(features.baths);
+  const sqft = Number(features.sqft) || 0;
+
+  return (
+    <div
+      role="region"
+      aria-label="Property preview"
+      className="absolute bottom-4 left-4 z-10 w-80 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl"
+    >
+      <div className="relative aspect-video bg-gray-100">
+        {mainPhoto ? (
+          <img
+            src={mainPhoto}
+            alt={address.street || 'Property photo'}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <PhotoPlaceholder className="h-full w-full" />
+        )}
+
+        {status ? (
+          <span className="absolute left-2 top-2 rounded bg-black/70 px-2 py-0.5 text-xs font-medium text-white backdrop-blur-sm">
+            {status}
+          </span>
+        ) : null}
+
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close preview"
+          className="absolute right-2 top-2 rounded-full bg-black/50 p-1 text-white transition-colors hover:bg-black/70 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2"
+        >
+          <CloseIcon className="h-4 w-4" />
+        </button>
       </div>
 
-      <div className="mt-2">
-        <div className="font-semibold text-gray-900">
-          {formatPrice(property.price)}
+      <div className="p-3">
+        <div className="font-semibold text-gray-900">{priceFormatted || formatPrice(price)}</div>
+        <div className="mt-1 text-xs text-gray-500">
+          {formatNumber(beds)}bd &bull; {formatNumber(baths)}ba &bull; {formatArea(sqft)}
         </div>
-        <div className="mt-1 text-sm text-gray-600">
-          {property.address.street}
+        <div className="mt-1 line-clamp-2 text-sm text-gray-700">
+          {formatAddress(address) || 'Address unavailable'}
         </div>
-        <div className="mt-2 flex items-center gap-4 text-xs text-gray-500">
-          <span>{property.features.beds} beds</span>
-          <span>{property.features.baths} baths</span>
-          <span>{formatArea(property.features.sqft)}</span>
-        </div>
+        {id ? <div className="mt-1 text-xs text-gray-400">MLS&reg; {id}</div> : null}
       </div>
     </div>
-  );
-}
-
-function XIcon({ className = '' }) {
-  return (
-    <svg
-      className={className}
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M6 18L18 6M6 6l12 12"
-      />
-    </svg>
   );
 }

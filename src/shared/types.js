@@ -121,6 +121,10 @@
  * @property {number} price - Asking price in USD.
  * @property {string} priceFormatted - Price as a US currency string.
  * @property {string} priceSqFt - Price per square foot, formatted; empty when sqft is unknown.
+ * @property {string} mlsArea - MLS major area name.
+ * @property {number} annualTaxes - Annual tax amount in USD.
+ * @property {number} associationFee - HOA/association fee.
+ * @property {string} associationFeeFrequency - Billing cadence for the association fee.
  * @property {PropertyAddress} address
  * @property {{mlsId: string, name: string, phone: string, officeName: string}} listingAgent
  * @property {{district: string, high: string, middle: string, elementary: string}} school
@@ -128,7 +132,7 @@
  * @property {Array<Photo>} photos
  * @property {PropertyGeo} geo
  * @property {PropertyDates} dates
- * @property {{type: string, subType: string, description: string}} details
+ * @property {{type: string, subType: string, description: string, features: Array<string>, amenities: string}} details
  */
 
 /**

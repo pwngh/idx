@@ -27,7 +27,7 @@ export function usePropertyDetail({ detailPath, initialProperty = null }) {
     navigation.state === 'loading' ||
     fetcher.state === 'submitting';
 
-  const isError = fetcher.data?.error;
+  const isError = Boolean(fetcher.data?.error);
 
   const fetchProperty = useCallback((id) => {
     if (!id) return;
@@ -40,7 +40,7 @@ export function usePropertyDetail({ detailPath, initialProperty = null }) {
     if (property?.id) {
       fetchProperty(property.id);
     }
-  }, [fetcher.data?.property, initialProperty, fetchProperty]);
+  }, [fetcher.data, initialProperty, fetchProperty]);
 
   const property = fetcher.data?.property || initialProperty;
 
