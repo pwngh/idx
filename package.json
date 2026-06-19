@@ -36,7 +36,7 @@
     "lint:fix": "eslint --fix .",
     "pret": "prettier -c .",
     "pret:fix": "prettier -w .",
-    "clean": "npx --yes rimraf node_modules package-lock.json dist && mkdir dist",
+    "clean": "rm -rf node_modules package-lock.json dist && mkdir dist",
     "load": "npm install --force --legacy-peer-deps",
     "prepare": "npm run build"
   },

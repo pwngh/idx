@@ -50,6 +50,9 @@ const config = {
     ]
   }),
   webpackFinal: async (config) => {
+    // This explicit babel-loader rule is required: the `babel` hook above does
+    // not transpile the project's own src/ JSX, so without this Storybook fails
+    // to compile components. (Verified — removing it breaks `build-storybook`.)
     config.module.rules.push({
       test: /\.(js|jsx)$/,
       exclude: /node_modules/,
